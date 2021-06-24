@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { program } = require("commander");
+const { initConnection, createRecording, uploadRecording } = require("./upload");
 
 program
   .command("ls")
@@ -76,6 +77,10 @@ function readRecordingFile(dir) {
   }
 
   return fs.readFileSync(file, "utf8").split("\n");
+}
+
+function writeRecordingFile(dir, lines) {
+  fs.writeFileSync(getRecordingsFile(dir), lines.join("\n"));
 }
 
 function readRecordings(dir) {
@@ -168,11 +173,80 @@ function commandListAllRecordings(opts) {
   console.log(JSON.stringify(recordings, null, 2));
 }
 
-function commandUploadRecording(id, opts) {}
-function commandUploadAllRecordings(opts) {}
+function canUploadRecording(recording) {
+  return recording.path && ["onDisk", "startedUpload"].includes(recording.status);
+}
 
-function maybeRemoveRecording(recording) {
-  if (recording.status == "onDisk") {
+function getServer(opts) {
+  return opts.server || "wss://dispatch.replay.io";
+}
+
+function addRecordingEvent(dir, kind, id, tags = {}) {
+  const lines = readRecordingFile(dir);
+  lines.push(JSON.stringify({
+    kind,
+    id,
+    timestamp: Date.now(),
+    ...tags,
+  }));
+  writeRecordingFile(dir, lines);
+}
+
+async function maybeUploadRecording(dir, server, recording) {
+  console.log(`Starting upload for ${recording.id}...`);
+  if (!canUploadRecording(recording)) {
+    console.log(`Upload failed: wrong recording status ${recording.status}`);
+    return false;
+  }
+  let contents;
+  try {
+    contents = fs.readFileSync(recording.path);
+  } catch (e) {
+    console.log(`Upload failed: can't read recording from disk: ${e}`);
+    return false;
+  }
+  if (!await initConnection(server)) {
+    console.log(`Upload failed: can't connect to server ${server}`);
+    return false;
+  }
+  const recordingId = await createRecording(recording.buildId);
+  console.log(`Created remote recording ${recordingId}, uploading...`);
+  addRecordingEvent(dir, "uploadStarted", recording.id, { server, recordingId });
+  await uploadRecording(recordingId, contents);
+  addRecordingEvent(dir, "uploadFinished", recording.id);
+  console.log("Upload finished.");
+  return true;
+}
+
+async function commandUploadRecording(id, opts) {
+  const server = getServer(opts);
+  const dir = getDirectory(opts);
+  const recordings = readRecordings(dir);
+  const recording = recordings.find(r => r.id == id);
+  if (!recording) {
+    console.log(`Unknown recording ${id}`);
+    process.exit(1);
+  }
+  const uploaded = await maybeUploadRecording(dir, server, recording);
+  process.exit(uploaded ? 0 : 1);
+}
+
+async function commandUploadAllRecordings(opts) {
+  const server = getServer(opts);
+  const dir = getDirectory(opts);
+  const recordings = readRecordings(dir);
+  let uploadedAll = true;
+  for (const recording of recordings) {
+    if (canUploadRecording(recording)) {
+      const uploaded = await maybeUploadRecording(dir, server, recording);
+      uploadedAll &&= uploaded;
+    }
+  }
+  process.exit(uploadedAll ? 0 : 1);
+}
+
+function maybeRemoveRecordingFile(recording) {
+  if (recording.path) {
     try {
       fs.unlinkSync(recording.path);
     } catch (e) {}
@@ -187,7 +261,7 @@ function commandRemoveRecording(id, opts) {
     console.log(`Unknown recording ${id}`);
     process.exit(1);
   }
-  maybeRemoveRecording(recording);
+  maybeRemoveRecordingFile(recording);
 
   const lines = readRecordingFile(dir).filter(line => {
     try {
@@ -201,12 +275,12 @@ function commandRemoveRecording(id, opts) {
     return true;
   });
 
-  fs.writeFileSync(getRecordingsFile(dir), lines.join("\n"));
+  writeRecordingFile(dir, lines);
 }
 
 function commandRemoveAllRecordings(opts) {
   const dir = getDirectory(opts);
   const recordings = readRecordings(dir);
-  recordings.forEach(maybeRemoveRecording);
+  recordings.forEach(maybeRemoveRecordingFile);
   fs.unlinkSync(getRecordingsFile(dir));
 }
