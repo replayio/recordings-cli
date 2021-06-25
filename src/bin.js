@@ -58,12 +58,12 @@ program
 program
   .parseAsync()
   .catch((err) => {
-    console.error(err.message ?? "Unknown error");
-    process.exitCode = 1;
+    console.log(err);
+    process.exit(1);
   });
 
 function getDirectory(opts) {
-  return opts.directory || `${process.env.HOME}/.replay`;
+  return opts.directory || process.env.RECORD_REPLAY_DIRECTORY || `${process.env.HOME}/.replay`;
 }
 
 function getRecordingsFile(dir) {
@@ -106,6 +106,7 @@ function readRecordings(dir) {
         recordings.push({
           id,
           createTime: (new Date(timestamp)).toString(),
+          buildId,
           runtime: getBuildRuntime(buildId),
           metadata: {},
 
@@ -182,10 +183,15 @@ function readRecordings(dir) {
   return recordings;
 }
 
+// Remove properties we only use internally.
+function cleanRecording(recording) {
+  return { ...recording, buildId: undefined };
+}
+
 function commandListAllRecordings(opts) {
   const dir = getDirectory(opts);
   const recordings = readRecordings(dir);
-  console.log(JSON.stringify(recordings, null, 2));
+  console.log(JSON.stringify(recordings.map(cleanRecording), null, 2));
 }
 
 function canUploadRecording(recording) {

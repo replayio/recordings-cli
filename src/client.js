@@ -41,7 +41,7 @@ class ProtocolClient {
       if (msg.result) {
         resolve(msg.result);
       } else {
-        reject(msg.error);
+        reject(`Channel error: ${JSON.stringify(msg)}`);
       }
     } else {
       throw new Error("Events NYI");
