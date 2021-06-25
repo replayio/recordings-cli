@@ -116,13 +116,20 @@ function readRecordings(dir) {
         }
         break;
       }
-      case "writeRecording": {
-        const { id, path, size } = obj;
+      case "writeStarted": {
+        const { id, path } = obj;
+        const recording = recordings.find(r => r.id == id);
+        if (recording) {
+          recording.status = "startedWrite";
+          recording.path = path;
+        }
+        break;
+      }
+      case "writeFinished": {
+        const { id } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
           recording.status = "onDisk";
-          recording.path = path;
-          recording.size = size;
         }
         break;
       }
