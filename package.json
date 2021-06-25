@@ -1,8 +1,10 @@
 {
-  "name": "recordings-cli",
+  "name": "@recordreplay/recordings-cli",
   "version": "0.1.0",
   "description": "CLI tool for uploading and managing recordings",
-  "main": "src/bin.ts",
+  "bin": {
+    "replay-recordings": "bin/replay-recordings"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -17,7 +19,6 @@
   },
   "homepage": "https://github.com/RecordReplay/recordings-cli#readme",
   "dependencies": {
-    "@types/node": "^15.12.4",
     "commander": "^7.2.0"
   }
 }
