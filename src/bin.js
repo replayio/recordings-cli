@@ -83,6 +83,11 @@ function writeRecordingFile(dir, lines) {
   fs.writeFileSync(getRecordingsFile(dir), lines.join("\n"));
 }
 
+function getBuildRuntime(buildId) {
+  const match = /.*?-(.*?)-/.exec(buildId);
+  return match ? match[1] : "unknown";
+}
+
 function readRecordings(dir) {
   const recordings = [];
   const lines = readRecordingFile(dir);
@@ -97,14 +102,17 @@ function readRecordings(dir) {
 
     switch (obj.kind) {
       case "createRecording": {
-        const { id, timestamp, buildId, driverVersion } = obj;
+        const { id, timestamp, buildId } = obj;
         recordings.push({
           id,
           createTime: (new Date(timestamp)).toString(),
-          buildId,
-          driverVersion,
+          runtime: getBuildRuntime(buildId),
           metadata: {},
-          status: "created",
+
+          // We use an unknown status after the createRecording event because
+          // there should always be later events describing what happened to the
+          // recording.
+          status: "unknown",
         });
         break;
       }
@@ -181,7 +189,7 @@ function commandListAllRecordings(opts) {
 }
 
 function canUploadRecording(recording) {
-  return recording.path && ["onDisk", "startedUpload"].includes(recording.status);
+  return recording.path && ["onDisk", "startedWrite", "startedUpload"].includes(recording.status);
 }
 
 function getServer(opts) {
