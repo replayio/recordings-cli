@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/RecordReplay/recordings-cli#readme",
   "dependencies": {
-    "commander": "^7.2.0"
+    "commander": "^7.2.0",
+    "ws": "^7.5.0"
   }
 }
