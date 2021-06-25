@@ -14,7 +14,7 @@ When using the Replay versions of node, playwright, or puppeteer, recordings whi
 
 `replay-recordings <command>`
 
-Possible commands are given below.  These may be used with the `--directory <dir>` option to override the default recording directory, or `--server <address>` to override the default server address (https://dispatch.replay.io).
+Possible commands are given below.  These may be used with the `--directory <dir>` option to override the default recording directory, or `--server <address>` to override the default server address.
 
 ### ls
 
