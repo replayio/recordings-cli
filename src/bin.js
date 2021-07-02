@@ -119,7 +119,7 @@ function getBuildRuntime(buildId) {
   return match ? match[1] : "unknown";
 }
 
-function readRecordings(dir) {
+function readRecordings(dir, ignoreHidden) {
   const recordings = [];
   const lines = readRecordingFile(dir);
   for (const line of lines) {
@@ -211,30 +211,26 @@ function readRecordings(dir) {
     }
   }
 
-  return recordings;
-}
+  if (!ignoreHidden) {
+    return recordings;
+  }
 
-// Convert a recording into a format for listing, returns null if the recording
-// should be ignored.
-function listRecording(recording, includeHidden) {
   // There can be a fair number of recordings from gecko/chromium content
   // processes which never loaded any interesting content. These are hidden by
   // default.
-  if (!includeHidden &&
-      recording.unusableReason &&
-      recording.unusableReason.includes("No interesting content")) {
-    return null;
-  }
+  return recordings.filter(r => !(r.unusableReason || "").includes("No interesting content"));
+}
 
+// Convert a recording into a format for listing.
+function listRecording(recording) {
   // Remove properties we only use internally.
   return { ...recording, buildId: undefined };
 }
 
 function commandListAllRecordings(opts) {
   const dir = getDirectory(opts);
-  const recordings = readRecordings(dir);
-  const listRecordings =
-    recordings.map(r => listRecording(r, opts.includeHidden)).filter(r => !!r);
+  const recordings = readRecordings(dir, !opts.includeHidden);
+  const listRecordings = recordings.map(listRecording);
   console.log(JSON.stringify(listRecordings, null, 2));
 }
 
@@ -349,7 +345,7 @@ async function commandViewRecording(id, opts) {
 async function commandViewLatestRecording(id, opts) {
   let server = getServer(opts);
   const dir = getDirectory(opts);
-  const recordings = readRecordings(dir);
+  const recordings = readRecordings(dir, /* ignoreHidden */ true);
   if (!recordings.length) {
     console.log("No recordings to view");
     process.exit(1);
