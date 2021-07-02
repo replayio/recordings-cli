@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { program } = require("commander");
 const { initConnection, createRecording, uploadRecording } = require("./upload");
+const open = require("open");
 
 program
   .command("ls")
@@ -8,6 +9,10 @@ program
   .option(
     "--directory <dir>",
     "Alternate recording directory."
+  )
+  .option(
+    "--include-hidden",
+    "Show recordings that are normally hidden."
   )
   .action(commandListAllRecordings);
 
@@ -36,6 +41,32 @@ program
     "Alternate server to upload recordings to."
   )
   .action(commandUploadAllRecordings);
+
+program
+  .command("view <id>")
+  .description("Load the devtools on a recording, uploading it if needed.")
+  .option(
+    "--directory <dir>",
+    "Alternate recording directory."
+  )
+  .option(
+    "--server <address>",
+    "Alternate server to upload recordings to."
+  )
+  .action(commandViewRecording);
+
+program
+  .command("view-latest")
+  .description("Load the devtools on the latest recording, uploading it if needed.")
+  .option(
+    "--directory <dir>",
+    "Alternate recording directory."
+  )
+  .option(
+    "--server <address>",
+    "Alternate server to upload recordings to."
+  )
+  .action(commandViewLatestRecording);
 
 program
   .command("rm <id>")
@@ -183,19 +214,38 @@ function readRecordings(dir) {
   return recordings;
 }
 
-// Remove properties we only use internally.
-function cleanRecording(recording) {
+// Convert a recording into a format for listing, returns null if the recording
+// should be ignored.
+function listRecording(recording, includeHidden) {
+  // There can be a fair number of recordings from gecko/chromium content
+  // processes which never loaded any interesting content. These are hidden by
+  // default.
+  if (!includeHidden &&
+      recording.unusableReason &&
+      recording.unusableReason.includes("No interesting content")) {
+    return null;
+  }
+
+  // Remove properties we only use internally.
   return { ...recording, buildId: undefined };
 }
 
 function commandListAllRecordings(opts) {
   const dir = getDirectory(opts);
   const recordings = readRecordings(dir);
-  console.log(JSON.stringify(recordings.map(cleanRecording), null, 2));
+  const listRecordings =
+    recordings.map(r => listRecording(r, opts.includeHidden)).filter(r => !!r);
+  console.log(JSON.stringify(listRecordings, null, 2));
 }
 
-function canUploadRecording(recording) {
-  return recording.path && ["onDisk", "startedWrite", "startedUpload"].includes(recording.status);
+function uploadSkipReason(recording) {
+  if (!["onDisk", "startedWrite", "startedUpload"].includes(recording.status)) {
+    return `wrong recording status ${recording.status}`;
+  }
+  if (!recording.path) {
+    return "recording not saved to disk";
+  }
+  return null;
 }
 
 function getServer(opts) {
@@ -215,20 +265,21 @@ function addRecordingEvent(dir, kind, id, tags = {}) {
 
 async function maybeUploadRecording(dir, server, recording) {
   console.log(`Starting upload for ${recording.id}...`);
-  if (!canUploadRecording(recording)) {
-    console.log(`Upload failed: wrong recording status ${recording.status}`);
-    return false;
+  const reason = uploadSkipReason(recording);
+  if (reason) {
+    console.log(`Upload failed: ${reason}`);
+    return null;
   }
   let contents;
   try {
     contents = fs.readFileSync(recording.path);
   } catch (e) {
     console.log(`Upload failed: can't read recording from disk: ${e}`);
-    return false;
+    return null;
   }
   if (!await initConnection(server)) {
     console.log(`Upload failed: can't connect to server ${server}`);
-    return false;
+    return null;
   }
   const recordingId = await createRecording(recording.buildId);
   console.log(`Created remote recording ${recordingId}, uploading...`);
@@ -236,7 +287,7 @@ async function maybeUploadRecording(dir, server, recording) {
   await uploadRecording(recordingId, contents);
   addRecordingEvent(dir, "uploadFinished", recording.id);
   console.log("Upload finished.");
-  return true;
+  return recordingId;
 }
 
 async function commandUploadRecording(id, opts) {
@@ -248,8 +299,8 @@ async function commandUploadRecording(id, opts) {
     console.log(`Unknown recording ${id}`);
     process.exit(1);
   }
-  const uploaded = await maybeUploadRecording(dir, server, recording);
-  process.exit(uploaded ? 0 : 1);
+  const recordingId = await maybeUploadRecording(dir, server, recording);
+  process.exit(recordingId ? 0 : 1);
 }
 
 async function commandUploadAllRecordings(opts) {
@@ -258,12 +309,53 @@ async function commandUploadAllRecordings(opts) {
   const recordings = readRecordings(dir);
   let uploadedAll = true;
   for (const recording of recordings) {
-    if (canUploadRecording(recording)) {
-      const uploaded = await maybeUploadRecording(dir, server, recording);
-      uploadedAll &&= uploaded;
+    if (!uploadSkipReason(recording)) {
+      const recordingId = await maybeUploadRecording(dir, server, recording);
+      uploadedAll &&= !!uploaded;
     }
   }
   process.exit(uploadedAll ? 0 : 1);
+}
+
+async function viewRecording(dir, server, recording) {
+  let recordingId;
+  if (recording.status == "uploaded") {
+    recordingId = recording.recordingId;
+    server = recording.server;
+  } else {
+    recordingId = await maybeUploadRecording(dir, server, recording);
+    if (!recordingId) {
+      return false;
+    }
+  }
+  const dispatch = server != "wss://dispatch.replay.io" ? `&dispatch=${server}` : "";
+  open(`https://app.replay.io?id=${recordingId}${dispatch}`);
+  return true;
+}
+
+async function commandViewRecording(id, opts) {
+  let server = getServer(opts);
+  const dir = getDirectory(opts);
+  const recordings = readRecordings(dir);
+  const recording = recordings.find(r => r.id == id);
+  if (!recording) {
+    console.log(`Unknown recording ${id}`);
+    process.exit(1);
+  }
+  const viewed = await viewRecording(dir, server, recording);
+  process.exit(viewed ? 0 : 1);
+}
+
+async function commandViewLatestRecording(id, opts) {
+  let server = getServer(opts);
+  const dir = getDirectory(opts);
+  const recordings = readRecordings(dir);
+  if (!recordings.length) {
+    console.log("No recordings to view");
+    process.exit(1);
+  }
+  const viewed = await viewRecording(dir, server, recordings[recordings.length - 1]);
+  process.exit(viewed ? 0 : 1);
 }
 
 function maybeRemoveRecordingFile(recording) {
