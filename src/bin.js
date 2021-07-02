@@ -1,7 +1,7 @@
 const fs = require("fs");
 const { program } = require("commander");
 const { initConnection, createRecording, uploadRecording } = require("./upload");
-const open = require("open");
+const { spawn } = require("child_process");
 
 program
   .command("ls")
@@ -313,6 +313,18 @@ async function commandUploadAllRecordings(opts) {
   process.exit(uploadedAll ? 0 : 1);
 }
 
+// Get the executable name to use when opening a URL.
+// It would be nice to use an existing npm package for this,
+// but the obvious choice of "open" didn't actually work on linux
+// when testing...
+function openExecutable() {
+  switch (process.platform) {
+    case "darwin": return "open";
+    case "linux": return "xdg-open";
+    default: throw new Error("Unsupported platform");
+  }
+}
+
 async function viewRecording(dir, server, recording) {
   let recordingId;
   if (recording.status == "uploaded") {
@@ -325,7 +337,7 @@ async function viewRecording(dir, server, recording) {
     }
   }
   const dispatch = server != "wss://dispatch.replay.io" ? `&dispatch=${server}` : "";
-  open(`https://app.replay.io?id=${recordingId}${dispatch}`);
+  spawn(openExecutable(), [`https://app.replay.io?id=${recordingId}${dispatch}`]);
   return true;
 }
 
