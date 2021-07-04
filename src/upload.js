@@ -24,7 +24,7 @@ async function initConnection(server) {
   return true;
 }
 
-async function createRecording(buildId) {
+async function connectionCreateRecording(buildId) {
   const { recordingId } = await gClient.sendCommand("Internal.createRecording", { buildId });
   return recordingId;
 }
@@ -32,7 +32,7 @@ async function createRecording(buildId) {
 // Granularity for splitting up a recording into chunks for uploading.
 const ChunkGranularity = 1024 * 1024;
 
-async function uploadRecording(recordingId, contents) {
+async function connectionUploadRecording(recordingId, contents) {
   const promises = [];
   for (let i = 0; i < contents.length; i += ChunkGranularity) {
     const buf = contents.subarray(i, i + ChunkGranularity);
@@ -43,6 +43,6 @@ async function uploadRecording(recordingId, contents) {
 
 module.exports = {
   initConnection,
-  createRecording,
-  uploadRecording,
+  connectionCreateRecording,
+  connectionUploadRecording,
 };

@@ -1,10 +1,10 @@
 # recordings-cli
 
-CLI tool for managing and uploading [Replay](https://replay.io) recordings.
+CLI tool and node module for managing and uploading [Replay](https://replay.io) recordings.
 
 ## Overview
 
-When using the Replay versions of node, playwright, or puppeteer, recordings which are created are saved to disk, by default in `$HOME/.replay`.  This CLI tool is used to manage these recordings and upload them to the record/replay web service so that they can be viewed.
+When using the Replay versions of node, playwright, or puppeteer, recordings which are created are saved to disk, by default in `$HOME/.replay`.  This package is used to manage these recordings and upload them to the record/replay web service so that they can be viewed.
 
 ## Installation
 
@@ -50,6 +50,14 @@ Upload the recording with the given ID to the web service.
 
 Upload all recordings to the web service which can be uploaded.
 
+### view <id>
+
+View the the given recording in the system's default browser, uploading it first if necessary.
+
+### view-latest
+
+View the most recently created recording in the system's default browser, uploading it first if necessary.
+
 ### rm <id>
 
 Remove the recording with the given ID and any on disk file for it.
@@ -57,3 +65,49 @@ Remove the recording with the given ID and any on disk file for it.
 ### rm-all
 
 Remove all recordings and on disk recording files.
+
+## Node Module Usage
+
+This package can be used as a node module to directly access its functionality rather than going through the CLI tool.
+
+Installation:
+
+```
+npm i @recordreplay/recordings-cli
+```
+
+Usage:
+
+```
+const interface = require("@recordreplay/recordings-cli");
+```
+
+The interface includes the following members.  Options objects can include `directory` and `server` properties which behave as `--directory` and `--server` arguments to the CLI tool, and a `verbose` property which can be set to log the same output as the CLI tool.  Any of these properties or the options object themselves can be omitted to use default values.
+
+### listAllRecordings(opts)
+
+Equivalent to `replay-recordings ls`, returns the JSON object for the recordings.
+
+### uploadRecording(id, opts)
+
+Equivalent to `replay-recordings upload <id>`, returns a promise that resolves with whether uploading succeeded.
+
+### uploadAllRecordings(opts)
+
+Equivalent to `replay-recordings upload-all`, returns a promise that resolves with whether all uploads succeeded.
+
+### viewRecording(id, opts)
+
+Equivalent to `replay-recordings view <id>`, returns a promise that resolves with whether the recording is being viewed.
+
+### viewLatestRecording(opts)
+
+Equivalent to `replay-recordings view-latest`, returns a promise that resolves with whether the latest recording is being viewed.
+
+### removeRecording(id, opts)
+
+Equivalent to `replay-recordings rm <id>`, returns whether the recording was removed.
+
+### removeAllRecordings(opts)
+
+Equivalent to `replay-recordings rm-all`.
