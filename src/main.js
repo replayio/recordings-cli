@@ -28,7 +28,7 @@ function getBuildRuntime(buildId) {
   return match ? match[1] : "unknown";
 }
 
-function readRecordings(dir) {
+function readRecordings(dir, includeHidden) {
   const recordings = [];
   const lines = readRecordingFile(dir);
   for (const line of lines) {
@@ -120,7 +120,16 @@ function readRecordings(dir) {
     }
   }
 
-  return recordings;
+  if (includeHidden) {
+    return recordings;
+  }
+
+  // There can be a fair number of recordings from gecko/chromium content
+  // processes which never loaded any interesting content. These are ignored by
+  // most callers. Note that we're unable to avoid generating these entries in
+  // the first place because the recordings log is append-only and we don't know
+  // when a recording process starts if it will ever do anything interesting.
+  return recordings.filter(r => !(r.unusableReason || "").includes("No interesting content"));
 }
 
 // Convert a recording into a format for listing.
@@ -280,7 +289,7 @@ function maybeRemoveRecordingFile(recording) {
 
 function removeRecording(id, opts = {}) {
   const dir = getDirectory(opts);
-  const recordings = readRecordings(dir);
+  const recordings = readRecordings(dir, includeHidden);
   const recording = recordings.find(r => r.id == id);
   if (!recording) {
     maybeLog(opts.verbose, `Unknown recording ${id}`);
