@@ -221,8 +221,9 @@ async function uploadAllRecordings(opts = {}) {
   let uploadedAll = true;
   for (const recording of recordings) {
     if (!uploadSkipReason(recording)) {
-      const recordingId = await doUploadRecording(dir, server, recording, opts.verbose);
-      uploadedAll &&= !!uploaded;
+      if (!await doUploadRecording(dir, server, recording, opts.verbose)) {
+        uploadedAll = false;
+      }
     }
   }
   return uploadedAll;
