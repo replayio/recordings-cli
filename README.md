@@ -90,7 +90,7 @@ Equivalent to `replay-recordings ls`, returns the JSON object for the recordings
 
 ### uploadRecording(id, opts)
 
-Equivalent to `replay-recordings upload <id>`, returns a promise that resolves with whether uploading succeeded.
+Equivalent to `replay-recordings upload <id>`, returns a promise that resolves with a recording ID if the upload succeeded, or null if uploading failed.
 
 ### uploadAllRecordings(opts)
 

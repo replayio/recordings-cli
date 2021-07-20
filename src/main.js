@@ -1,13 +1,15 @@
 const fs = require("fs");
+const path = require("path");
 const { initConnection, connectionCreateRecording, connectionUploadRecording } = require("./upload");
 const { spawn } = require("child_process");
 
 function getDirectory(opts) {
-  return opts.directory || process.env.RECORD_REPLAY_DIRECTORY || `${process.env.HOME}/.replay`;
+  const home = process.env.HOME || process.env.USERPROFILE;
+  return opts.directory || process.env.RECORD_REPLAY_DIRECTORY || path.join(home, ".replay");
 }
 
 function getRecordingsFile(dir) {
-  return `${dir}/recordings.log`;
+  return path.join(dir, "recordings.log");
 }
 
 function readRecordingFile(dir) {
