@@ -3,12 +3,18 @@ const { defer } = require("./utils");
 
 let gClient;
 
-async function initConnection(server) {
+async function initConnection(server, accessToken) {
   if (!gClient) {
     const { promise, resolve } = defer();
     gClient = new ProtocolClient(server, {
-      onOpen() {
-        resolve(true);
+      async onOpen() {
+        try {
+          await gClient.setAccessToken(accessToken);
+          resolve(true);
+        } catch (err) {
+          console.log(`Error authenticating with server: ${err}`);
+          resolve(false);
+        }
       },
       onClose() {
         console.log(`Server connection closed.`);
@@ -25,7 +31,10 @@ async function initConnection(server) {
 }
 
 async function connectionCreateRecording(buildId) {
-  const { recordingId } = await gClient.sendCommand("Internal.createRecording", { buildId });
+  const { recordingId } = await gClient.sendCommand(
+    "Internal.createRecording",
+    { buildId }
+  );
   return recordingId;
 }
 
@@ -36,7 +45,13 @@ async function connectionUploadRecording(recordingId, contents) {
   const promises = [];
   for (let i = 0; i < contents.length; i += ChunkGranularity) {
     const buf = contents.subarray(i, i + ChunkGranularity);
-    promises.push(gClient.sendCommand("Internal.addRecordingData", { recordingId, offset: i, length: buf.length }, buf));
+    promises.push(
+      gClient.sendCommand(
+        "Internal.addRecordingData",
+        { recordingId, offset: i, length: buf.length },
+        buf
+      )
+    );
   }
   return Promise.all(promises);
 }

@@ -177,7 +177,7 @@ function maybeLog(verbose, str) {
   }
 }
 
-async function doUploadRecording(dir, server, recording, verbose) {
+async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   maybeLog(verbose, `Starting upload for ${recording.id}...`);
   const reason = uploadSkipReason(recording);
   if (reason) {
@@ -191,7 +191,7 @@ async function doUploadRecording(dir, server, recording, verbose) {
     maybeLog(verbose, `Upload failed: can't read recording from disk: ${e}`);
     return null;
   }
-  if (!await initConnection(server)) {
+  if (!await initConnection(server, apiKey)) {
     maybeLog(verbose, `Upload failed: can't connect to server ${server}`);
     return null;
   }
@@ -213,7 +213,7 @@ async function uploadRecording(id, opts = {}) {
     maybeLog(opts.verbose, `Unknown recording ${id}`);
     return null;
   }
-  return doUploadRecording(dir, server, recording, opts.verbose);
+  return doUploadRecording(dir, server, recording, opts.verbose, opts.apiKey);
 }
 
 async function uploadAllRecordings(opts = {}) {
@@ -223,7 +223,7 @@ async function uploadAllRecordings(opts = {}) {
   let uploadedAll = true;
   for (const recording of recordings) {
     if (!uploadSkipReason(recording)) {
-      if (!await doUploadRecording(dir, server, recording, opts.verbose)) {
+      if (!await doUploadRecording(dir, server, recording, opts.verbose, opts.apiKey)) {
         uploadedAll = false;
       }
     }
