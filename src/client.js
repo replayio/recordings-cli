@@ -15,16 +15,32 @@ class ProtocolClient {
     this.socket.on("open", callbacks.onOpen);
     this.socket.on("close", callbacks.onClose);
     this.socket.on("error", callbacks.onError);
-    this.socket.on("message", message => this.onMessage(message));
+    this.socket.on("message", (message) => this.onMessage(message));
   }
 
   close() {
     this.socket.close();
   }
 
+  async setAccessToken(accessToken) {
+    accessToken = accessToken || process.env.RECORD_REPLAY_API_KEY;
+
+    if (!accessToken) {
+      throw new Error(
+        "Access token must be passed or set via the RECORD_REPLAY_API_KEY environment variable."
+      );
+    }
+
+    return this.sendCommand("Authentication.setAccessToken", {
+      accessToken,
+    });
+  }
+
   async sendCommand(method, params, data) {
     const id = this.nextMessageId++;
-    this.socket.send(JSON.stringify({ id, method, params, binary: data ? true : undefined }));
+    this.socket.send(
+      JSON.stringify({ id, method, params, binary: data ? true : undefined })
+    );
     if (data) {
       this.socket.send(data);
     }
