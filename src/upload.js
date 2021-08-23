@@ -56,8 +56,16 @@ async function connectionUploadRecording(recordingId, contents) {
   return Promise.all(promises);
 }
 
+function closeConnection() {
+  if (gClient) {
+    gClient.close();
+    gClient = undefined;
+  }
+}
+
 module.exports = {
   initConnection,
   connectionCreateRecording,
   connectionUploadRecording,
+  closeConnection,
 };

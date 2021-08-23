@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { initConnection, connectionCreateRecording, connectionUploadRecording } = require("./upload");
+const { initConnection, connectionCreateRecording, connectionUploadRecording, closeConnection } = require("./upload");
 const { spawn } = require("child_process");
 
 function getDirectory(opts) {
@@ -201,6 +201,7 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   await connectionUploadRecording(recordingId, contents);
   addRecordingEvent(dir, "uploadFinished", recording.id);
   maybeLog(verbose, "Upload finished.");
+  closeConnection();
   return recordingId;
 }
 
