@@ -33,7 +33,12 @@ async function initConnection(server, accessToken) {
 async function connectionCreateRecording(buildId) {
   const { recordingId } = await gClient.sendCommand(
     "Internal.createRecording",
-    { buildId }
+    {
+      buildId,
+      // Ensure that if the upload fails, we will not create
+      // partial recordings.
+      requireFinish: true,
+    }
   );
   return recordingId;
 }
@@ -53,6 +58,14 @@ async function connectionUploadRecording(recordingId, contents) {
       )
     );
   }
+  // Explicitly mark the recording complete so the server knows that it has
+  // been sent all of the recording data, and can save the recording.
+  // This means if someone presses Ctrl+C, the server doesn't save a
+  // partial recording.
+  promises.push(gClient.sendCommand(
+    "Internal.finishRecording",
+    { recordingId }
+  ))
   return Promise.all(promises);
 }
 
