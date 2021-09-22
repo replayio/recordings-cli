@@ -22,7 +22,8 @@ function readRecordingFile(dir) {
 }
 
 function writeRecordingFile(dir, lines) {
-  fs.writeFileSync(getRecordingsFile(dir), lines.join("\n"));
+  // Add a trailing newline so the driver can safely append logs
+  fs.writeFileSync(getRecordingsFile(dir), lines.join("\n") + "\n");
 }
 
 function getBuildRuntime(buildId) {
