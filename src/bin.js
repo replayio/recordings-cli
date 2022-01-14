@@ -63,6 +63,10 @@ program
     "--server <address>",
     "Alternate server to upload recordings to."
   )
+  .option(
+    "--api-key <key>",
+    "Authentication API Key"
+  )
   .action(commandViewRecording);
 
 program
@@ -75,6 +79,10 @@ program
   .option(
     "--server <address>",
     "Alternate server to upload recordings to."
+  )
+  .option(
+    "--api-key <key>",
+    "Authentication API Key"
   )
   .action(commandViewLatestRecording);
 

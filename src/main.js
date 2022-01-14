@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { initConnection, connectionCreateRecording, connectionUploadRecording, closeConnection } = require("./upload");
+const { maybeLog } = require("./utils");
 const { spawn } = require("child_process");
 
 function getDirectory(opts) {
@@ -71,7 +72,7 @@ function readRecordings(dir, includeHidden) {
         const { id, path } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "startedWrite";
+          updateStatus(recording, "startedWrite");
           recording.path = path;
         }
         break;
@@ -80,7 +81,7 @@ function readRecordings(dir, includeHidden) {
         const { id } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "onDisk";
+          updateStatus(recording, "onDisk");
         }
         break;
       }
@@ -88,7 +89,7 @@ function readRecordings(dir, includeHidden) {
         const { id, server, recordingId } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "startedUpload";
+          updateStatus(recording, "startedUpload");
           recording.server = server;
           recording.recordingId = recordingId;
         }
@@ -98,7 +99,7 @@ function readRecordings(dir, includeHidden) {
         const { id } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "uploaded";
+          updateStatus(recording, "uploaded");
         }
         break;
       }
@@ -106,7 +107,7 @@ function readRecordings(dir, includeHidden) {
         const { id, reason } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "unusable";
+          updateStatus(recording, "unusable");
           recording.unusableReason = reason;
         }
         break;
@@ -115,7 +116,7 @@ function readRecordings(dir, includeHidden) {
         const { id } = obj;
         const recording = recordings.find(r => r.id == id);
         if (recording) {
-          recording.status = "crashed";
+          updateStatus(recording, "crashed");
         }
         break;
       }
@@ -132,6 +133,14 @@ function readRecordings(dir, includeHidden) {
   // the first place because the recordings log is append-only and we don't know
   // when a recording process starts if it will ever do anything interesting.
   return recordings.filter(r => !(r.unusableReason || "").includes("No interesting content"));
+}
+
+function updateStatus(recording, status) {
+  // Once a recording enters an unusable or crashed status, don't change it.
+  if (recording.status == "unusable" || recording.status == "crashed") {
+    return;
+  }
+  recording.status = status;
 }
 
 // Convert a recording into a format for listing.
@@ -171,12 +180,6 @@ function addRecordingEvent(dir, kind, id, tags = {}) {
   writeRecordingFile(dir, lines);
 }
 
-function maybeLog(verbose, str) {
-  if (verbose) {
-    console.log(str);
-  }
-}
-
 async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   maybeLog(verbose, `Starting upload for ${recording.id}...`);
   const reason = uploadSkipReason(recording);
@@ -191,7 +194,7 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
     maybeLog(verbose, `Upload failed: can't read recording from disk: ${e}`);
     return null;
   }
-  if (!await initConnection(server, apiKey)) {
+  if (!await initConnection(server, apiKey, verbose)) {
     maybeLog(verbose, `Upload failed: can't connect to server ${server}`);
     return null;
   }
@@ -244,13 +247,13 @@ function openExecutable() {
   }
 }
 
-async function doViewRecording(dir, server, recording, verbose) {
+async function doViewRecording(dir, server, recording, verbose, apiKey) {
   let recordingId;
   if (recording.status == "uploaded") {
     recordingId = recording.recordingId;
     server = recording.server;
   } else {
-    recordingId = await doUploadRecording(dir, server, recording, verbose);
+    recordingId = await doUploadRecording(dir, server, recording, verbose, apiKey);
     if (!recordingId) {
       return false;
     }
@@ -269,7 +272,7 @@ async function viewRecording(id, opts = {}) {
     maybeLog(opts.verbose, `Unknown recording ${id}`);
     return false;
   }
-  return doViewRecording(dir, server, recording, opts.verbose);
+  return doViewRecording(dir, server, recording, opts.verbose, opts.apiKey);
 }
 
 async function viewLatestRecording(opts = {}) {
@@ -280,7 +283,7 @@ async function viewLatestRecording(opts = {}) {
     maybeLog(opts.verbose, "No recordings to view");
     return false;
   }
-  return doViewRecording(dir, server, recordings[recordings.length - 1], opts.verbose);
+  return doViewRecording(dir, server, recordings[recordings.length - 1], opts.verbose, opts.apiKey);
 }
 
 function maybeRemoveRecordingFile(recording) {

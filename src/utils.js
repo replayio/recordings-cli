@@ -8,4 +8,10 @@ function defer() {
   return { promise, resolve, reject };
 }
 
-module.exports = { defer };
+function maybeLog(verbose, str) {
+  if (verbose) {
+    console.log(str);
+  }
+}
+
+module.exports = { defer, maybeLog };

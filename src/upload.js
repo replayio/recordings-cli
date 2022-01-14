@@ -1,9 +1,9 @@
 const ProtocolClient = require("./client");
-const { defer } = require("./utils");
+const { defer, maybeLog } = require("./utils");
 
 let gClient;
 
-async function initConnection(server, accessToken) {
+async function initConnection(server, accessToken, verbose) {
   if (!gClient) {
     const { promise, resolve } = defer();
     gClient = new ProtocolClient(server, {
@@ -12,16 +12,16 @@ async function initConnection(server, accessToken) {
           await gClient.setAccessToken(accessToken);
           resolve(true);
         } catch (err) {
-          console.log(`Error authenticating with server: ${err}`);
+          maybeLog(verbose, `Error authenticating with server: ${err}`);
           resolve(false);
         }
       },
       onClose() {
-        console.log(`Server connection closed.`);
+        maybeLog(verbose, `Server connection closed.`);
         resolve(false);
       },
       onError(e) {
-        console.log(`Error connecting to server: ${e}`);
+        maybeLog(verbose, `Error connecting to server: ${e}`);
         resolve(false);
       },
     });
