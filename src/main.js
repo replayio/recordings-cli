@@ -1,13 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 const { initConnection, connectionCreateRecording, connectionUploadRecording, closeConnection } = require("./upload");
-const { maybeLog } = require("./utils");
+const { ensurePlaywrightBrowsersInstalled, getPlaywrightBrowserPath } = require("./install");
+const { getDirectory, maybeLog } = require("./utils");
 const { spawn } = require("child_process");
-
-function getDirectory(opts) {
-  const home = process.env.HOME || process.env.USERPROFILE;
-  return opts.directory || process.env.RECORD_REPLAY_DIRECTORY || path.join(home, ".replay");
-}
 
 function getRecordingsFile(dir) {
   return path.join(dir, "recordings.log");
@@ -336,4 +332,9 @@ module.exports = {
   viewLatestRecording,
   removeRecording,
   removeAllRecordings,
+
+  // These methods aren't documented or available via the CLI, and are used by other
+  // @recordreplay NPM packages.
+  ensurePlaywrightBrowsersInstalled,
+  getPlaywrightBrowserPath,
 };
