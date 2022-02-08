@@ -1,6 +1,12 @@
 const fs = require("fs");
 const path = require("path");
-const { initConnection, connectionCreateRecording, connectionUploadRecording, closeConnection } = require("./upload");
+const {
+  initConnection,
+  connectionCreateRecording,
+  connectionProcessRecording,
+  connectionUploadRecording,
+  closeConnection,
+} = require("./upload");
 const { ensurePlaywrightBrowsersInstalled, getPlaywrightBrowserPath } = require("./install");
 const { getDirectory, maybeLog } = require("./utils");
 const { spawn } = require("child_process");
@@ -198,6 +204,7 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   const recordingId = await connectionCreateRecording(recording.buildId);
   maybeLog(verbose, `Created remote recording ${recordingId}, uploading...`);
   addRecordingEvent(dir, "uploadStarted", recording.id, { server, recordingId });
+  connectionProcessRecording(recordingId);
   await connectionUploadRecording(recordingId, contents);
   addRecordingEvent(dir, "uploadFinished", recording.id);
   maybeLog(verbose, "Upload finished.");

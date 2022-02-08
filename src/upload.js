@@ -43,6 +43,10 @@ async function connectionCreateRecording(buildId) {
   return recordingId;
 }
 
+function connectionProcessRecording(recordingId) {
+  gClient.sendCommand("Recording.processRecording", { recordingId });
+}
+
 // Granularity for splitting up a recording into chunks for uploading.
 const ChunkGranularity = 1024 * 1024;
 
