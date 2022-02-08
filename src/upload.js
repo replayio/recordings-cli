@@ -83,6 +83,7 @@ function closeConnection() {
 module.exports = {
   initConnection,
   connectionCreateRecording,
+  connectionProcessRecording,
   connectionUploadRecording,
   closeConnection,
 };
