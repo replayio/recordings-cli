@@ -169,7 +169,7 @@ function uploadSkipReason(recording) {
 }
 
 function getServer(opts) {
-  return opts.server || "wss://dispatch.replay.io";
+  return opts.server || process.env.RECORD_REPLAY_SERVER || "wss://dispatch.replay.io";
 }
 
 function addRecordingEvent(dir, kind, id, tags = {}) {
