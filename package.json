@@ -1,6 +1,6 @@
 {
   "name": "@recordreplay/recordings-cli",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "CLI tool for uploading and managing recordings",
   "bin": {
     "replay-recordings": "bin/replay-recordings"
