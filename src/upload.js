@@ -43,6 +43,22 @@ async function connectionCreateRecording(buildId) {
   return recordingId;
 }
 
+async function setRecordingMetadata(id, metadata) {
+  await gClient.sendCommand("Internal.setRecordingMetadata", {
+    recordingData: {
+      duration: metadata.duration || 0,
+      url: metadata.url || "",
+      title: metadata.title || "",
+      operations: metadata.operations || {
+        scriptDomains: [],
+      },
+      id,
+      lastScreenData: "",
+      lastScreenMimeType: "",
+    },
+  });
+}
+
 function connectionProcessRecording(recordingId) {
   gClient.sendCommand("Recording.processRecording", { recordingId });
 }
@@ -66,10 +82,9 @@ async function connectionUploadRecording(recordingId, contents) {
   // been sent all of the recording data, and can save the recording.
   // This means if someone presses Ctrl+C, the server doesn't save a
   // partial recording.
-  promises.push(gClient.sendCommand(
-    "Internal.finishRecording",
-    { recordingId }
-  ))
+  promises.push(
+    gClient.sendCommand("Internal.finishRecording", { recordingId })
+  );
   return Promise.all(promises);
 }
 
@@ -86,4 +101,5 @@ module.exports = {
   connectionProcessRecording,
   connectionUploadRecording,
   closeConnection,
+  setRecordingMetadata,
 };
