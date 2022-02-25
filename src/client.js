@@ -16,6 +16,8 @@ class ProtocolClient {
     this.socket.on("close", callbacks.onClose);
     this.socket.on("error", callbacks.onError);
     this.socket.on("message", (message) => this.onMessage(message));
+
+    this.eventListeners = new Map();
   }
 
   close() {
@@ -36,10 +38,10 @@ class ProtocolClient {
     });
   }
 
-  async sendCommand(method, params, data) {
+  async sendCommand(method, params, data, sessionId) {
     const id = this.nextMessageId++;
     this.socket.send(
-      JSON.stringify({ id, method, params, binary: data ? true : undefined })
+      JSON.stringify({ id, method, params, binary: data ? true : undefined, sessionId })
     );
     if (data) {
       this.socket.send(data);
@@ -47,6 +49,10 @@ class ProtocolClient {
     const waiter = defer();
     this.pendingMessages.set(id, waiter);
     return waiter.promise;
+  }
+
+  setEventListener(method, callback) {
+    this.eventListeners.set(method, callback);
   }
 
   onMessage(contents) {
@@ -59,8 +65,10 @@ class ProtocolClient {
       } else {
         reject(`Channel error: ${JSON.stringify(msg)}`);
       }
+    } else if (this.eventListeners.has(msg.method)) {
+      this.eventListeners.get(msg.method)(msg.params);
     } else {
-      throw new Error("Events NYI");
+      console.log(`Received event without listener: ${msg.method}`);
     }
   }
 }

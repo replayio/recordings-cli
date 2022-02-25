@@ -17,7 +17,6 @@ async function initConnection(server, accessToken, verbose) {
         }
       },
       onClose() {
-        maybeLog(verbose, `Server connection closed.`);
         resolve(false);
       },
       onError(e) {
@@ -63,6 +62,28 @@ function connectionProcessRecording(recordingId) {
   gClient.sendCommand("Recording.processRecording", { recordingId });
 }
 
+async function connectionWaitForProcessed(recordingId) {
+  const { sessionId } = await gClient.sendCommand("Recording.createSession", { recordingId });
+  const waiter = defer();
+
+  gClient.setEventListener(
+    "Recording.sessionError",
+    ({ message }) => waiter.resolve(`session error ${sessionId}: ${message}`)
+  );
+
+  gClient.setEventListener("Session.unprocessedRegions", () => {});
+
+  gClient.sendCommand(
+    "Session.ensureProcessed",
+    { level: "basic" },
+    null,
+    sessionId
+  ).then(() => waiter.resolve(null));
+
+  const error = await waiter.promise;
+  return error;
+}
+
 // Granularity for splitting up a recording into chunks for uploading.
 const ChunkGranularity = 1024 * 1024;
 
@@ -99,6 +120,7 @@ module.exports = {
   initConnection,
   connectionCreateRecording,
   connectionProcessRecording,
+  connectionWaitForProcessed,
   connectionUploadRecording,
   closeConnection,
   setRecordingMetadata,

@@ -4,6 +4,7 @@ const {
   initConnection,
   connectionCreateRecording,
   connectionProcessRecording,
+  connectionWaitForProcessed,
   connectionUploadRecording,
   closeConnection,
   setRecordingMetadata,
@@ -218,6 +219,10 @@ function addRecordingEvent(dir, kind, id, tags = {}) {
 
 async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   maybeLog(verbose, `Starting upload for ${recording.id}...`);
+  if (recording.status == "uploaded" && recording.recordingId) {
+    maybeLog(verbose, `Already uploaded: ${recording.recordingId}`);
+    return recording.recordingId;
+  }
   const reason = uploadSkipReason(recording);
   if (reason) {
     maybeLog(verbose, `Upload failed: ${reason}`);
@@ -262,6 +267,40 @@ async function uploadRecording(id, opts = {}) {
     return null;
   }
   return doUploadRecording(dir, server, recording, opts.verbose, opts.apiKey);
+}
+
+async function processUploadedRecording(recordingId, opts) {
+  const server = getServer(opts);
+  const { apiKey, verbose } = opts;
+
+  maybeLog(verbose, `Processing recording ${recordingId}...`);
+
+  if (!(await initConnection(server, apiKey, verbose))) {
+    maybeLog(verbose, `Processing failed: can't connect to server ${server}`);
+    return false;
+  }
+
+  try {
+    const error = await connectionWaitForProcessed(recordingId);
+    if (error) {
+      maybeLog(verbose, `Processing failed: ${error}`);
+      return false;
+    }
+  } finally {
+    closeConnection();
+  }
+
+  maybeLog(verbose, "Finished processing.");
+  return true;
+}
+
+async function processRecording(id, opts = {}) {
+  const recordingId = await uploadRecording(id, opts);
+  if (!recordingId) {
+    return null;
+  }
+  const succeeded = await processUploadedRecording(recordingId, opts);
+  return succeeded ? recordingId : null;
 }
 
 async function uploadAllRecordings(opts = {}) {
@@ -400,6 +439,7 @@ function removeAllRecordings(opts = {}) {
 module.exports = {
   listAllRecordings,
   uploadRecording,
+  processRecording,
   uploadAllRecordings,
   viewRecording,
   viewLatestRecording,
