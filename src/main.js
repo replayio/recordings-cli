@@ -411,5 +411,4 @@ module.exports = {
   // @recordreplay NPM packages.
   ensurePlaywrightBrowsersInstalled,
   getPlaywrightBrowserPath,
-  updateBrowsers,
 };
