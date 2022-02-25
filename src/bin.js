@@ -2,6 +2,7 @@ const { program } = require("commander");
 const {
   listAllRecordings,
   uploadRecording,
+  processRecording,
   uploadAllRecordings,
   viewRecording,
   viewLatestRecording,
@@ -35,6 +36,23 @@ program
     "Authentication API Key"
   )
   .action(commandUploadRecording);
+
+program
+  .command("process <id>")
+  .description("Upload a recording to the remote server and process it.")
+  .option(
+    "--directory <dir>",
+    "Alternate recording directory."
+  )
+  .option(
+    "--server <address>",
+    "Alternate server to upload recordings to."
+  )
+  .option(
+    "--api-key <key>",
+    "Authentication API Key"
+  )
+  .action(commandProcessRecording);
 
 program
   .command("upload-all")
@@ -132,6 +150,11 @@ async function commandUploadRecording(id, opts) {
   process.exit(recordingId ? 0 : 1);
 }
 
+async function commandProcessRecording(id, opts) {
+  const recordingId = await processRecording(id, { ...opts, verbose: true });
+  process.exit(recordingId ? 0 : 1);
+}
+
 async function commandUploadAllRecordings(opts) {
   const uploadedAll = await uploadAllRecordings({ ...opts, verbose: true });
   process.exit(uploadedAll ? 0 : 1);
@@ -157,6 +180,7 @@ function commandRemoveAllRecordings(opts) {
   process.exit(0);
 }
 
-function commandUpdateBrowsers(opts) {
-  updateBrowsers({ ...opts, verbose: true }).then(() => process.exit(0));
+async function commandUpdateBrowsers(opts) {
+  await updateBrowsers({ ...opts, verbose: true });
+  process.exit(0);
 }
