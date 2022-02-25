@@ -66,6 +66,10 @@ Remove the recording with the given ID and any on disk file for it.
 
 Remove all recordings and on disk recording files.
 
+### update-browsers
+
+Updates any installed browsers used for recording in automation: [playwright](https://www.npmjs.com/package/@recordreplay/playwright), [puppeteer](https://www.npmjs.com/package/@recordreplay/puppeteer), and [cypress](https://www.npmjs.com/package/@recordreplay/cypress).
+
 ## Node Module Usage
 
 This package can be used as a node module to directly access its functionality rather than going through the CLI tool.
@@ -111,3 +115,7 @@ Equivalent to `replay-recordings rm <id>`, returns whether the recording was rem
 ### removeAllRecordings(opts)
 
 Equivalent to `replay-recordings rm-all`.
+
+### updateBrowsers(opts)
+
+Equivalent to `replay-recordings update-browsers`.

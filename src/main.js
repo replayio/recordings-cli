@@ -11,6 +11,7 @@ const {
 const {
   ensurePlaywrightBrowsersInstalled,
   getPlaywrightBrowserPath,
+  updateBrowsers,
 } = require("./install");
 const { getDirectory, maybeLog } = require("./utils");
 const { spawn } = require("child_process");
@@ -408,6 +409,7 @@ module.exports = {
   viewLatestRecording,
   removeRecording,
   removeAllRecordings,
+  updateBrowsers,
 
   // These methods aren't documented or available via the CLI, and are used by other
   // @recordreplay NPM packages.
