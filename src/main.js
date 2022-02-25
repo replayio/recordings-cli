@@ -393,7 +393,11 @@ function removeAllRecordings(opts = {}) {
   const dir = getDirectory(opts);
   const recordings = readRecordings(dir);
   recordings.forEach(maybeRemoveRecordingFile);
-  fs.unlinkSync(getRecordingsFile(dir));
+
+  const file = getRecordingsFile(dir);
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
+  }
 }
 
 module.exports = {
