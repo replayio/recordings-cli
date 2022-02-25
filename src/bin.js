@@ -7,6 +7,7 @@ const {
   viewLatestRecording,
   removeRecording,
   removeAllRecordings,
+  updateBrowsers,
 } = require("./main");
 
 program
@@ -105,6 +106,15 @@ program
   .action(commandRemoveAllRecordings);
 
 program
+  .command("update-browsers")
+  .description("Update browsers used in automation.")
+  .option(
+    "--directory <dir>",
+    "Alternate recording directory."
+  )
+  .action(commandUpdateBrowsers);
+
+program
   .parseAsync()
   .catch((err) => {
     console.log(err);
@@ -145,4 +155,8 @@ function commandRemoveRecording(id, opts) {
 function commandRemoveAllRecordings(opts) {
   removeAllRecordings({ ...opts, verbose: true });
   process.exit(0);
+}
+
+function commandUpdateBrowsers(opts) {
+  updateBrowsers({ ...opts, verbose: true }).then(() => process.exit(0));
 }
