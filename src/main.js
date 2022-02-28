@@ -6,6 +6,7 @@ const {
   connectionProcessRecording,
   connectionWaitForProcessed,
   connectionUploadRecording,
+  connectionReportCrash,
   closeConnection,
   setRecordingMetadata,
 } = require("./upload");
@@ -149,6 +150,25 @@ function readRecordings(dir, includeHidden) {
         }
         break;
       }
+      case "crashData": {
+        const { id, data } = obj;
+        const recording = recordings.find((r) => r.id == id);
+        if (recording) {
+          if (!recording.crashData) {
+            recording.crashData = [];
+          }
+          recording.crashData.push(data);
+        }
+        break;
+      }
+      case "crashUploaded": {
+        const { id } = obj;
+        const recording = recordings.find((r) => r.id == id);
+        if (recording) {
+          updateStatus(recording, "crashUploaded");
+        }
+        break;
+      }
     }
   }
 
@@ -167,8 +187,11 @@ function readRecordings(dir, includeHidden) {
 }
 
 function updateStatus(recording, status) {
-  // Once a recording enters an unusable or crashed status, don't change it.
-  if (recording.status == "unusable" || recording.status == "crashed") {
+  // Once a recording enters an unusable or crashed status, don't change it
+  // except to mark crashes as uploaded.
+  if (recording.status == "unusable" ||
+      recording.status == "crashUploaded" ||
+      (recording.status == "crashed" && status != "crashUploaded")) {
     return;
   }
   recording.status = status;
@@ -177,7 +200,7 @@ function updateStatus(recording, status) {
 // Convert a recording into a format for listing.
 function listRecording(recording) {
   // Remove properties we only use internally.
-  return { ...recording, buildId: undefined };
+  return { ...recording, buildId: undefined, crashData: undefined };
 }
 
 function listAllRecordings(opts = {}) {
@@ -187,10 +210,17 @@ function listAllRecordings(opts = {}) {
 }
 
 function uploadSkipReason(recording) {
-  if (!["onDisk", "startedWrite", "startedUpload"].includes(recording.status)) {
+  // Status values where there is something worth uploading.
+  const canUploadStatus = [
+    "onDisk",
+    "startedWrite",
+    "startedUpload",
+    "crashed",
+  ];
+  if (!canUploadStatus.includes(recording.status)) {
     return `wrong recording status ${recording.status}`;
   }
-  if (!recording.path) {
+  if (!recording.path && recording.status != "crashed") {
     return "recording not saved to disk";
   }
   return null;
@@ -217,6 +247,20 @@ function addRecordingEvent(dir, kind, id, tags = {}) {
   writeRecordingFile(dir, lines);
 }
 
+async function doUploadCrash(dir, server, recording, verbose, apiKey) {
+  maybeLog(verbose, `Starting crash data upload for ${recording.id}...`);
+  if (!(await initConnection(server, apiKey, verbose))) {
+    maybeLog(verbose, `Crash data upload failed: can't connect to server ${server}`);
+    return null;
+  }
+  await Promise.all((recording.crashData || []).map(async data => {
+    await connectionReportCrash(data);
+  }));
+  addRecordingEvent(dir, "crashUploaded", recording.id, { server });
+  maybeLog(verbose, `Crash data upload finished.`);
+  closeConnection();
+}
+
 async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   maybeLog(verbose, `Starting upload for ${recording.id}...`);
   if (recording.status == "uploaded" && recording.recordingId) {
@@ -226,6 +270,11 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
   const reason = uploadSkipReason(recording);
   if (reason) {
     maybeLog(verbose, `Upload failed: ${reason}`);
+    return null;
+  }
+  if (recording.status == "crashed") {
+    await doUploadCrash(dir, server, recording, verbose, apiKey);
+    maybeLog(verbose, `Upload failed: crashed while recording`);
     return null;
   }
   let contents;

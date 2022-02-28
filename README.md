@@ -34,6 +34,7 @@ The possible status values for a recording are as follows:
 * `startedUpload`: The recording started being uploaded but didn't finish.
 * `unusable`: The recording was marked as unusable for some reason, such as a stack overflow occurring.
 * `crashed`: The recording process crashed before finishing.
+* `crashUploaded`: The recording process crashed and the crash data was uploaded to the record/replay web service for analysis.
 
 Depending on the status the recording descriptor can have some of the following additional properties:
 

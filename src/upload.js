@@ -84,6 +84,10 @@ async function connectionWaitForProcessed(recordingId) {
   return error;
 }
 
+async function connectionReportCrash(data) {
+  await gClient.sendCommand("Internal.reportCrash", { data });
+}
+
 // Granularity for splitting up a recording into chunks for uploading.
 const ChunkGranularity = 1024 * 1024;
 
@@ -122,6 +126,7 @@ module.exports = {
   connectionProcessRecording,
   connectionWaitForProcessed,
   connectionUploadRecording,
+  connectionReportCrash,
   closeConnection,
   setRecordingMetadata,
 };
