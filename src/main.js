@@ -11,8 +11,10 @@ const {
   setRecordingMetadata,
 } = require("./upload");
 const {
+  ensurePuppeteerBrowsersInstalled,
   ensurePlaywrightBrowsersInstalled,
   getPlaywrightBrowserPath,
+  getPuppeteerBrowserPath,
   updateBrowsers,
 } = require("./install");
 const { getDirectory, maybeLog } = require("./utils");
@@ -503,5 +505,7 @@ module.exports = {
   // These methods aren't documented or available via the CLI, and are used by other
   // @recordreplay NPM packages.
   ensurePlaywrightBrowsersInstalled,
+  ensurePuppeteerBrowsersInstalled,
   getPlaywrightBrowserPath,
+  getPuppeteerBrowserPath,
 };
