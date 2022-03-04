@@ -6,6 +6,12 @@ const https = require("https");
 const path = require("path");
 const { defer, getDirectory } = require("./utils");
 
+const EXECUTABLE_PATHS = {
+  "darwin:firefox": ["firefox", "Nightly.app", "Contents", "MacOS", "firefox"],
+  "linux:chromium": ["chrome-linux", "chrome"],
+  "linux:firefox": ["firefox", "firefox"],
+};
+
 async function ensurePlaywrightBrowsersInstalled(kind = "all") {
   switch (process.platform) {
     case "darwin":
@@ -24,6 +30,16 @@ async function ensurePlaywrightBrowsersInstalled(kind = "all") {
   }
 }
 
+async function ensurePuppeteerBrowsersInstalled(kind = "all") {
+  switch (process.platform) {
+    case "linux":
+      if (["all", "chromium"].includes(kind)) {
+        await installReplayBrowser("linux-replay-chromium.tar.xz", "puppeteer", "replay-chromium", "chrome-linux");
+      }
+      break;
+  }
+}
+
 async function updateBrowsers(opts = {}) {
   switch (process.platform) {
     case "darwin":
@@ -37,18 +53,36 @@ async function updateBrowsers(opts = {}) {
   }
 }
 
-function getPlaywrightBrowserPath(kind) {
+function getPlatformKey(browserName) {
+  const key = `${process.platform}:${browserName}`;
+  switch (key) {
+    case "darwin:firefox":
+    case "linux:firefox":
+    case "linux:chromium":
+      return key;
+  }
+
+  return undefined;
+}
+
+function getExecutablePath(runner, browserName) {
+  // Override with replay specific browsers.
   const replayDir = getDirectory();
 
-  switch (`${process.platform}:${kind}`) {
-    case "darwin:gecko":
-      return path.join(replayDir, "playwright", "firefox", "Nightly.app", "Contents", "MacOS", "firefox");
-    case "linux:gecko":
-      return path.join(replayDir, "playwright", "firefox", "firefox");
-    case "linux:chromium":
-      return path.join(replayDir, "playwright", "chrome-linux", "chrome");
+  const key = getPlatformKey(browserName);
+  if (!key) {
+    return null;
   }
-  return null;
+
+  return path.join(replayDir, runner, ...EXECUTABLE_PATHS[key]);
+}
+
+function getPlaywrightBrowserPath(kind) {
+  return getExecutablePath("playwright", kind);
+}
+
+function getPuppeteerBrowserPath(kind) {
+  return getExecutablePath("puppeteer", kind);
 }
 
 // Installs a browser if it isn't already installed.
@@ -137,6 +171,8 @@ async function downloadReplayFile(downloadFile) {
 
 module.exports = {
   ensurePlaywrightBrowsersInstalled,
+  ensurePuppeteerBrowsersInstalled,
   getPlaywrightBrowserPath,
+  getPuppeteerBrowserPath,
   updateBrowsers,
 };
