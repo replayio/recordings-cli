@@ -8,12 +8,23 @@ export interface ConnectOptions extends BaseOptions {
   server?: string;
 }
 
+export type Recording = {
+  id: number;
+  createTime: string;
+  metadata: Record<string, unknown>;
+  status: string;
+  runtime: string;
+  path: string;
+  server?: string;
+  recordingId?: string;
+}
+
 /**
  * Lists all locally-stored recordings
  * 
  * @param opts BaseOptions
  */
-export function listAllRecordings(opts?: BaseOptions): void;
+export function listAllRecordings(opts?: BaseOptions): Recording[];
 
 /**
  * Uploads the recording.
@@ -24,7 +35,7 @@ export function listAllRecordings(opts?: BaseOptions): void;
  * @param opts ConnectOptions
  * @returns String
  */
-export function uploadRecording(recordingId: string, opts?: ConnectOptions): Promise<string | null>;
+export function uploadRecording(recordingId: number, opts?: ConnectOptions): Promise<string | null>;
 
 /**
  * Uploads the recording (if necessary) and attempts to process the recording to
@@ -36,7 +47,7 @@ export function uploadRecording(recordingId: string, opts?: ConnectOptions): Pro
  * @param opts ConnectOptions
  * @returns String
  */
-export function processRecording(recordingId: string, opts?: ConnectOptions): Promise<string | null>;
+export function processRecording(recordingId: number, opts?: ConnectOptions): Promise<string | null>;
 
 /**
  * Uploads all pending recordings.
@@ -57,7 +68,7 @@ export function uploadAllRecordings(opts?: ConnectOptions): Promise<boolean>;
  * @param opts ConnectOptions
  * @returns Boolean
  */
-export function viewRecording(recordingId: string, opts?: ConnectOptions): Promise<boolean>;
+export function viewRecording(recordingId: number, opts?: ConnectOptions): Promise<boolean>;
 
 /**
  * Uploads (if necessary) the newest recording and launches the default browser
@@ -79,7 +90,7 @@ export function viewLatestRecording(opts?: ConnectOptions): Promise<boolean>;
  * @param opts BaseOptions
  * @returns Boolean
  */
-export function removeRecording(recordingId: string, opts?: BaseOptions): boolean;
+export function removeRecording(recordingId: number, opts?: BaseOptions): boolean;
 
 /**
  * Removes all local recordings
