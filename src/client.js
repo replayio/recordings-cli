@@ -1,11 +1,16 @@
+const HttpsProxyAgent = require("https-proxy-agent");
 const WebSocket = require("ws");
 const { defer } = require("./utils");
 
 // Simple protocol client for use in writing standalone applications.
 
 class ProtocolClient {
-  constructor(address, callbacks) {
-    this.socket = new WebSocket(address);
+  constructor(address, callbacks, opts = {}) {
+    const agent = opts.proxy ? new HttpsProxyAgent(new URL(opts.proxy)) : undefined;
+
+    this.socket = new WebSocket(address, {
+      agent
+    });
     this.callbacks = callbacks;
 
     // Internal state.

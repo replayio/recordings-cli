@@ -6,6 +6,7 @@ export interface BaseOptions {
 export interface ConnectOptions extends BaseOptions {
   apiKey?: string;
   server?: string;
+  proxy?: string;
 }
 
 export type Recording = {

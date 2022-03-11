@@ -249,9 +249,9 @@ function addRecordingEvent(dir, kind, id, tags = {}) {
   writeRecordingFile(dir, lines);
 }
 
-async function doUploadCrash(dir, server, recording, verbose, apiKey) {
+async function doUploadCrash(dir, server, recording, verbose, apiKey, proxy) {
   maybeLog(verbose, `Starting crash data upload for ${recording.id}...`);
-  if (!(await initConnection(server, apiKey, verbose))) {
+  if (!(await initConnection(server, apiKey, verbose, proxy))) {
     maybeLog(verbose, `Crash data upload failed: can't connect to server ${server}`);
     return null;
   }
@@ -263,7 +263,7 @@ async function doUploadCrash(dir, server, recording, verbose, apiKey) {
   closeConnection();
 }
 
-async function doUploadRecording(dir, server, recording, verbose, apiKey) {
+async function doUploadRecording(dir, server, recording, verbose, apiKey, proxy) {
   maybeLog(verbose, `Starting upload for ${recording.id}...`);
   if (recording.status == "uploaded" && recording.recordingId) {
     maybeLog(verbose, `Already uploaded: ${recording.recordingId}`);
@@ -275,7 +275,7 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
     return null;
   }
   if (recording.status == "crashed") {
-    await doUploadCrash(dir, server, recording, verbose, apiKey);
+    await doUploadCrash(dir, server, recording, verbose, apiKey, proxy);
     maybeLog(verbose, `Upload failed: crashed while recording`);
     return null;
   }
@@ -286,7 +286,7 @@ async function doUploadRecording(dir, server, recording, verbose, apiKey) {
     maybeLog(verbose, `Upload failed: can't read recording from disk: ${e}`);
     return null;
   }
-  if (!(await initConnection(server, apiKey, verbose))) {
+  if (!(await initConnection(server, apiKey, verbose, proxy))) {
     maybeLog(verbose, `Upload failed: can't connect to server ${server}`);
     return null;
   }
@@ -317,16 +317,16 @@ async function uploadRecording(id, opts = {}) {
     maybeLog(opts.verbose, `Unknown recording ${id}`);
     return null;
   }
-  return doUploadRecording(dir, server, recording, opts.verbose, opts.apiKey);
+  return doUploadRecording(dir, server, recording, opts.verbose, opts.apiKey, opts.proxy);
 }
 
 async function processUploadedRecording(recordingId, opts) {
   const server = getServer(opts);
-  const { apiKey, verbose } = opts;
+  const { apiKey, verbose, proxy } = opts;
 
   maybeLog(verbose, `Processing recording ${recordingId}...`);
 
-  if (!(await initConnection(server, apiKey, verbose))) {
+  if (!(await initConnection(server, apiKey, verbose, proxy))) {
     maybeLog(verbose, `Processing failed: can't connect to server ${server}`);
     return false;
   }
@@ -367,7 +367,8 @@ async function uploadAllRecordings(opts = {}) {
           server,
           recording,
           opts.verbose,
-          opts.apiKey
+          opts.apiKey,
+          opts.proxy
         ))
       ) {
         uploadedAll = false;
@@ -392,7 +393,7 @@ function openExecutable() {
   }
 }
 
-async function doViewRecording(dir, server, recording, verbose, apiKey) {
+async function doViewRecording(dir, server, recording, verbose, apiKey, proxy) {
   let recordingId;
   if (recording.status == "uploaded") {
     recordingId = recording.recordingId;
@@ -403,7 +404,8 @@ async function doViewRecording(dir, server, recording, verbose, apiKey) {
       server,
       recording,
       verbose,
-      apiKey
+      apiKey,
+      proxy
     );
     if (!recordingId) {
       return false;
@@ -426,7 +428,7 @@ async function viewRecording(id, opts = {}) {
     maybeLog(opts.verbose, `Unknown recording ${id}`);
     return false;
   }
-  return doViewRecording(dir, server, recording, opts.verbose, opts.apiKey);
+  return doViewRecording(dir, server, recording, opts.verbose, opts.apiKey, opts.proxy);
 }
 
 async function viewLatestRecording(opts = {}) {
@@ -442,7 +444,8 @@ async function viewLatestRecording(opts = {}) {
     server,
     recordings[recordings.length - 1],
     opts.verbose,
-    opts.apiKey
+    opts.apiKey,
+    opts.proxy
   );
 }
 

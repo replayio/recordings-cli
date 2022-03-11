@@ -3,7 +3,7 @@ const { defer, maybeLog } = require("./utils");
 
 let gClient;
 
-async function initConnection(server, accessToken, verbose) {
+async function initConnection(server, accessToken, verbose, proxy) {
   if (!gClient) {
     const { promise, resolve } = defer();
     gClient = new ProtocolClient(server, {
@@ -23,6 +23,8 @@ async function initConnection(server, accessToken, verbose) {
         maybeLog(verbose, `Error connecting to server: ${e}`);
         resolve(false);
       },
+    }, {
+      proxy
     });
     return promise;
   }
