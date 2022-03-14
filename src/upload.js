@@ -3,29 +3,33 @@ const { defer, maybeLog } = require("./utils");
 
 let gClient;
 
-async function initConnection(server, accessToken, verbose, proxy) {
+async function initConnection(server, accessToken, verbose, agent) {
   if (!gClient) {
     const { promise, resolve } = defer();
-    gClient = new ProtocolClient(server, {
-      async onOpen() {
-        try {
-          await gClient.setAccessToken(accessToken);
-          resolve(true);
-        } catch (err) {
-          maybeLog(verbose, `Error authenticating with server: ${err}`);
+    gClient = new ProtocolClient(
+      server,
+      {
+        async onOpen() {
+          try {
+            await gClient.setAccessToken(accessToken);
+            resolve(true);
+          } catch (err) {
+            maybeLog(verbose, `Error authenticating with server: ${err}`);
+            resolve(false);
+          }
+        },
+        onClose() {
           resolve(false);
-        }
+        },
+        onError(e) {
+          maybeLog(verbose, `Error connecting to server: ${e}`);
+          resolve(false);
+        },
       },
-      onClose() {
-        resolve(false);
-      },
-      onError(e) {
-        maybeLog(verbose, `Error connecting to server: ${e}`);
-        resolve(false);
-      },
-    }, {
-      proxy
-    });
+      {
+        agent,
+      }
+    );
     return promise;
   }
   return true;
@@ -65,22 +69,20 @@ function connectionProcessRecording(recordingId) {
 }
 
 async function connectionWaitForProcessed(recordingId) {
-  const { sessionId } = await gClient.sendCommand("Recording.createSession", { recordingId });
+  const { sessionId } = await gClient.sendCommand("Recording.createSession", {
+    recordingId,
+  });
   const waiter = defer();
 
-  gClient.setEventListener(
-    "Recording.sessionError",
-    ({ message }) => waiter.resolve(`session error ${sessionId}: ${message}`)
+  gClient.setEventListener("Recording.sessionError", ({ message }) =>
+    waiter.resolve(`session error ${sessionId}: ${message}`)
   );
 
   gClient.setEventListener("Session.unprocessedRegions", () => {});
 
-  gClient.sendCommand(
-    "Session.ensureProcessed",
-    { level: "basic" },
-    null,
-    sessionId
-  ).then(() => waiter.resolve(null));
+  gClient
+    .sendCommand("Session.ensureProcessed", { level: "basic" }, null, sessionId)
+    .then(() => waiter.resolve(null));
 
   const error = await waiter.promise;
   return error;
