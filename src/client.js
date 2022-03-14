@@ -1,4 +1,3 @@
-const HttpsProxyAgent = require("https-proxy-agent");
 const WebSocket = require("ws");
 const { defer } = require("./utils");
 
@@ -6,10 +5,8 @@ const { defer } = require("./utils");
 
 class ProtocolClient {
   constructor(address, callbacks, opts = {}) {
-    const agent = opts.proxy ? new HttpsProxyAgent(new URL(opts.proxy)) : undefined;
-
     this.socket = new WebSocket(address, {
-      agent
+      agent: opts.agent,
     });
     this.callbacks = callbacks;
 
@@ -46,7 +43,13 @@ class ProtocolClient {
   async sendCommand(method, params, data, sessionId) {
     const id = this.nextMessageId++;
     this.socket.send(
-      JSON.stringify({ id, method, params, binary: data ? true : undefined, sessionId })
+      JSON.stringify({
+        id,
+        method,
+        params,
+        binary: data ? true : undefined,
+        sessionId,
+      })
     );
     if (data) {
       this.socket.send(data);

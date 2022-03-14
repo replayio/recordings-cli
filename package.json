@@ -1,6 +1,6 @@
 {
   "name": "@recordreplay/recordings-cli",
-  "version": "0.10.4-beta.1",
+  "version": "0.10.4-beta.2",
   "description": "CLI tool for uploading and managing recordings",
   "bin": {
     "replay-recordings": "bin/replay-recordings"
@@ -21,7 +21,6 @@
   "homepage": "https://github.com/RecordReplay/recordings-cli#readme",
   "dependencies": {
     "commander": "^7.2.0",
-    "https-proxy-agent": "^5.0.0",
     "ws": "^7.5.0"
   }
 }
