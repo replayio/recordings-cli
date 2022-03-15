@@ -4,26 +4,32 @@ const { defer, maybeLog } = require("./utils");
 let gClient;
 let gClientReady = defer();
 
-async function initConnection(server, accessToken, verbose) {
+async function initConnection(server, accessToken, verbose, agent) {
   if (!gClient) {
-    gClient = new ProtocolClient(server, {
-      async onOpen() {
-        try {
-          await gClient.setAccessToken(accessToken);
-          gClientReady.resolve(true);
-        } catch (err) {
-          maybeLog(verbose, `Error authenticating with server: ${err}`);
+    gClient = new ProtocolClient(
+      server,
+      {
+        async onOpen() {
+          try {
+            await gClient.setAccessToken(accessToken);
+            gClientReady.resolve(true);
+          } catch (err) {
+            maybeLog(verbose, `Error authenticating with server: ${err}`);
+            gClientReady.resolve(false);
+          }
+        },
+        onClose() {
           gClientReady.resolve(false);
-        }
+        },
+        onError(e) {
+          maybeLog(verbose, `Error connecting to server: ${e}`);
+          gClientReady.resolve(false);
+        },
       },
-      onClose() {
-        gClientReady.resolve(false);
-      },
-      onError(e) {
-        maybeLog(verbose, `Error connecting to server: ${e}`);
-        gClientReady.resolve(false);
-      },
-    });
+      {
+        agent,
+      }
+    );
   }
 
   return gClientReady.promise;
