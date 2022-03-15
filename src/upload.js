@@ -2,31 +2,31 @@ const ProtocolClient = require("./client");
 const { defer, maybeLog } = require("./utils");
 
 let gClient;
+let gClientReady = defer();
 
 async function initConnection(server, accessToken, verbose) {
   if (!gClient) {
-    const { promise, resolve } = defer();
     gClient = new ProtocolClient(server, {
       async onOpen() {
         try {
           await gClient.setAccessToken(accessToken);
-          resolve(true);
+          gClientReady.resolve(true);
         } catch (err) {
           maybeLog(verbose, `Error authenticating with server: ${err}`);
-          resolve(false);
+          gClientReady.resolve(false);
         }
       },
       onClose() {
-        resolve(false);
+        gClientReady.resolve(false);
       },
       onError(e) {
         maybeLog(verbose, `Error connecting to server: ${e}`);
-        resolve(false);
+        gClientReady.resolve(false);
       },
     });
-    return promise;
   }
-  return true;
+
+  return gClientReady.promise;
 }
 
 async function connectionCreateRecording(buildId) {
@@ -63,22 +63,20 @@ function connectionProcessRecording(recordingId) {
 }
 
 async function connectionWaitForProcessed(recordingId) {
-  const { sessionId } = await gClient.sendCommand("Recording.createSession", { recordingId });
+  const { sessionId } = await gClient.sendCommand("Recording.createSession", {
+    recordingId,
+  });
   const waiter = defer();
 
-  gClient.setEventListener(
-    "Recording.sessionError",
-    ({ message }) => waiter.resolve(`session error ${sessionId}: ${message}`)
+  gClient.setEventListener("Recording.sessionError", ({ message }) =>
+    waiter.resolve(`session error ${sessionId}: ${message}`)
   );
 
   gClient.setEventListener("Session.unprocessedRegions", () => {});
 
-  gClient.sendCommand(
-    "Session.ensureProcessed",
-    { level: "basic" },
-    null,
-    sessionId
-  ).then(() => waiter.resolve(null));
+  gClient
+    .sendCommand("Session.ensureProcessed", { level: "basic" }, null, sessionId)
+    .then(() => waiter.resolve(null));
 
   const error = await waiter.promise;
   return error;
