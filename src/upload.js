@@ -6,24 +6,25 @@ let gClientReady = defer();
 
 async function initConnection(server, accessToken, verbose, agent) {
   if (!gClient) {
+    let { resolve } = gClientReady;
     gClient = new ProtocolClient(
       server,
       {
         async onOpen() {
           try {
             await gClient.setAccessToken(accessToken);
-            gClientReady.resolve(true);
+            resolve(true);
           } catch (err) {
             maybeLog(verbose, `Error authenticating with server: ${err}`);
-            gClientReady.resolve(false);
+            resolve(false);
           }
         },
         onClose() {
-          gClientReady.resolve(false);
+          resolve(false);
         },
         onError(e) {
           maybeLog(verbose, `Error connecting to server: ${e}`);
-          gClientReady.resolve(false);
+          resolve(false);
         },
       },
       {
@@ -121,6 +122,7 @@ function closeConnection() {
   if (gClient) {
     gClient.close();
     gClient = undefined;
+    gClientReady = defer();
   }
 }
 
